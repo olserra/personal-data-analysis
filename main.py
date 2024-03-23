@@ -34,6 +34,10 @@ s3_client = boto3.client(
     region_name=AWS_DEFAULT_REGION,
 )
 
+@app.get("/")
+async def test_endpoint():
+    return {"message": "Success! Your BoostioAI FastAPI application is working correctly."}
+
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     try:
