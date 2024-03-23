@@ -40,6 +40,8 @@ async def test_endpoint():
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
+    if file.content_type != 'application/json':
+        raise HTTPException(status_code=415, detail="Unsupported file type. Only JSON files are accepted.")
     try:
         file_content = await file.read()
         s3_client.put_object(Bucket=S3_BUCKET_NAME, Key=file.filename, Body=file_content)
