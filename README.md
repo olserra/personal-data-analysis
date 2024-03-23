@@ -1,4 +1,3 @@
-```markdown
 # BoostioAI
 
 ## Introduction
@@ -25,4 +24,3 @@ Bridging the Human-AI With Your Own Data. Seamlessly integrate metadata to forge
 - **Method:** `GET`
 - **Description:** A simple endpoint to test if the API is working.
 - **Success Response:** Code: 200, Content: `{ message: "Success! Your FastAPI application is working correctly." }`
-```
