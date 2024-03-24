@@ -51,5 +51,30 @@ async def upload_file(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/download/conversation")
+async def download_conversation():
+    file_name = "conversation.json"
+    try:
+        # Fetch the file from S3
+        response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=file_name)
+        
+        # Read the file content
+        file_content = response['Body'].read()
+        
+        # Prepare and return the response
+        # 'application/json' is appropriate here given the specific file you're working with
+        return Response(content=file_content, media_type='application/json')
+    except NoCredentialsError:
+        raise HTTPException(status_code=500, detail="AWS credentials not available")
+    except ClientError as e:
+        # Handle specific client errors differently
+        if e.response['Error']['Code'] == 'NoSuchKey':
+            raise HTTPException(status_code=404, detail="File not found")
+        else:
+            raise HTTPException(status_code=500, detail="S3 Client Error")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0")
