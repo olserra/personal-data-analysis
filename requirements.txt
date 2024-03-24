@@ -3,4 +3,4 @@ uvicorn==0.17.0
 python-multipart==0.0.5
 boto3==1.21.0
 python-dotenv==0.19.2
-openai=1.14.2
+openai==1.14.2
