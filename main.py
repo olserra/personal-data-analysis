@@ -1,9 +1,9 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Dict
+from pydantic import BaseModel, Field
+from typing import List, Dict, Optional, Any
 import boto3
 from fastapi.responses import Response
-from pydantic import BaseModel  # Import BaseModel here
 from botocore.exceptions import NoCredentialsError, ClientError
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -37,31 +37,58 @@ s3_client = boto3.client(
     region_name=AWS_DEFAULT_REGION,
 )
 
+class Author(BaseModel):
+    role: str
+    name: Optional[str] = None
+    metadata: Dict[str, Any]
+
+class Message(BaseModel):
+    id: str
+    author: Author
+    create_time: Optional[float] = None
+    update_time: Optional[float] = None
+    content: Dict[str, Any]
+    status: str
+    end_turn: Optional[bool] = None
+    weight: int
+    metadata: Dict[str, Any]
+    recipient: str
+
+class Mapping(BaseModel):
+    id: str
+    message: Optional[Message] = None
+    parent: Optional[str] = None
+    children: List[str]
+
+class Conversation(BaseModel):
+    title: str
+    create_time: float
+    update_time: float
+    mapping: Dict[str, Mapping]
 
 class InsightRequest(BaseModel):
-    conversations: List[Dict]
+    conversations: List[Conversation]
 
 @app.post("/insights")
 async def get_insights(request: InsightRequest):
     client = OpenAI()
     
     try:
-        # Extract the last 99 conversations
-        last_conversations = request.conversations[-99:]
+        # Extract the last 99 conversations, ensure they are serialized properly
+        last_conversations = json.loads(request.json())['conversations'][-99:]
         
-        # Make the request to OpenAI API
         completion = client.chat.completions.create(
           model="gpt-3.5-turbo",
           messages=[
               {"role": "system", "content": "Analyze the following conversations for patterns, common mistakes, and learning improvements:"},
-              {"role": "user", "content": str(last_conversations)}
+              {"role": "user", "content": json.dumps(last_conversations)}
           ]
         )
         
-        # Return the insights from OpenAI
         return {"completion": completion.choices[0].text.strip()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/")
 async def test_endpoint():
