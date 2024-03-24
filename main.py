@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import boto3
 from fastapi.responses import Response
+from pydantic import BaseModel  # Import BaseModel here
 from botocore.exceptions import NoCredentialsError, ClientError
 from dotenv import load_dotenv
 from openai import OpenAI
