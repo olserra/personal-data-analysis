@@ -5,6 +5,7 @@ import boto3
 from fastapi.responses import Response
 from botocore.exceptions import NoCredentialsError, ClientError
 from dotenv import load_dotenv
+from openai import OpenAI
 import os
 
 load_dotenv()
@@ -25,6 +26,7 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Initialize S3 client
 s3_client = boto3.client(
@@ -33,6 +35,32 @@ s3_client = boto3.client(
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     region_name=AWS_DEFAULT_REGION,
 )
+
+
+class InsightRequest(BaseModel):
+    conversations: List[Dict]
+
+@app.post("/insights")
+async def get_insights(request: InsightRequest):
+    client = OpenAI()
+    
+    try:
+        # Extract the last 99 conversations
+        last_conversations = request.conversations[-99:]
+        
+        # Make the request to OpenAI API
+        completion = client.chat.completions.create(
+          model="gpt-3.5-turbo",
+          messages=[
+              {"role": "system", "content": "Analyze the following conversations for patterns, common mistakes, and learning improvements:"},
+              {"role": "user", "content": str(last_conversations)}
+          ]
+        )
+        
+        # Return the insights from OpenAI
+        return {"completion": completion.choices[0].text.strip()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 async def test_endpoint():
