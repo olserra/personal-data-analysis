@@ -2,11 +2,10 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import boto3
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions import NoCredentialsError, ClientError
 from dotenv import load_dotenv
 import os
 
-# Load environment variables from .env file
 load_dotenv()
 
 app = FastAPI()
@@ -14,7 +13,7 @@ app = FastAPI()
 # CORS middleware setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this to your frontend's domain for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -54,7 +53,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.get("/profiler")
 async def download_conversation():
-    file_name = "conversation.json"
+    file_name = "conversations.json"
     try:
         # Fetch the file from S3
         response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=file_name)
@@ -62,8 +61,6 @@ async def download_conversation():
         # Read the file content
         file_content = response['Body'].read()
         
-        # Prepare and return the response
-        # 'application/json' is appropriate here given the specific file you're working with
         return Response(content=file_content, media_type='application/json')
     except NoCredentialsError:
         raise HTTPException(status_code=500, detail="AWS credentials not available")
