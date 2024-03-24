@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Dict
 import boto3
 from fastapi.responses import Response
 from pydantic import BaseModel  # Import BaseModel here
