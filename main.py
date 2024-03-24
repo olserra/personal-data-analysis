@@ -52,7 +52,7 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/download/conversation")
+@app.get("/profiler")
 async def download_conversation():
     file_name = "conversation.json"
     try:
