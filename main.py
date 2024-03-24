@@ -75,14 +75,16 @@ async def get_insights(request: InsightRequest):
     
     try:
         # Extract the last 99 conversations, ensure they are serialized properly
-        last_conversations = json.loads(request.json())['conversations'][-99:]
+        last_conversation = request.conversations[-1]
+
+        last_conversation_str = json.dumps(last_conversation.dict(), ensure_ascii=False)
         
         completion = client.chat.completions.create(
-          model="gpt-3.5-turbo",
-          messages=[
-              {"role": "system", "content": "Analyze the following conversations for patterns, common mistakes, and learning improvements:"},
-              {"role": "user", "content": json.dumps(last_conversations)}
-          ]
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Analyze the following conversation for patterns, common mistakes, and learning improvements:"},
+                {"role": "user", "content": last_conversation_str}
+            ]
         )
         
         return {"completion": completion.choices[0].text.strip()}
