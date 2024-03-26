@@ -14,13 +14,18 @@ from langchain.agents import (
 )
 from langchain_community.agent_toolkits import JsonToolkit
 from langchain.chains import LLMChain
-from langchain.llms.openai import OpenAI
+from openai import OpenAI
 from langchain.requests import TextRequestsWrapper
 from langchain.tools.json.tool import JsonSpec
+import zipfile
+import io
 
 load_dotenv()
 
 app = FastAPI()
+
+global OPENAI_API_KEY
+global ZIP_FILE_NAME
 
 # CORS middleware setup
 app.add_middleware(
@@ -36,7 +41,6 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 file_name = "conversations.json"
 
@@ -48,53 +52,62 @@ s3_client = boto3.client(
     region_name=AWS_DEFAULT_REGION,
 )
 
-
-@app.post("/insights")
-async def get_insights():
-    try:
-        file_name = "conversations.json"
-        response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=file_name)
-
-        # Correctly reading the file content from S3 response
-        file_content = response['Body'].read()
-        data = json.loads(file_content)
-
-        data = json.loads(file_content)
-        # Wrap the list in a dictionary if it's not already a dict
-        if isinstance(data, list):
-            data = {"conversations": data}
-
-        json_spec = JsonSpec(dict_=data, max_value_length=16000)
-        json_toolkit = JsonToolkit(spec=json_spec)
-
-        json_agent_executor = create_json_agent(
-            llm=OpenAI(api_key=OPENAI_API_KEY, temperature=0),
-            model_name="gpt-3.5-turbo", 
-            toolkit=json_toolkit,
-            verbose=True
-        )
-
-        insights = json_agent_executor.run("Analyze the following conversation for patterns, common mistakes, and learning improvements")
-        return insights
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating insights: {str(e)}")
-
 @app.get("/")
 async def test_endpoint():
     return {"message": "Success! Your BoostioAI FastAPI application is working correctly."}
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    if file.content_type != 'application/json':
-        raise HTTPException(status_code=415, detail="Unsupported file type. Only JSON files are accepted.")
+async def upload_file(file: UploadFile = File(...), openai_api_key: str = Form(...)):
+    global OPENAI_API_KEY
+    global ZIP_FILE_NAME  # Access the global variable
+
+    if not file.content_type.startswith('application/zip'):
+        raise HTTPException(status_code=415, detail="Unsupported file type. Only ZIP files are accepted.")
     try:
-        file_content = await file.read()
-        s3_client.put_object(Bucket=S3_BUCKET_NAME, Key=file.filename, Body=file_content)
-        return {"message": "File uploaded successfully", "filename": file.filename}
-    except NoCredentialsError:
-        raise HTTPException(status_code=500, detail="AWS credentials not available")
+        zip_content = await file.read()
+        ZIP_FILE_NAME = os.path.basename(file.filename)  # Store the file name in the global variable
+
+        # Store the received OpenAI API key in the global variable
+        OPENAI_API_KEY = openai_api_key
+
+        # Write the zip file content to S3
+        s3_client.put_object(Bucket=S3_BUCKET_NAME, Key=ZIP_FILE_NAME, Body=zip_content)
+
+        return {"message": "File uploaded successfully", "filename": ZIP_FILE_NAME}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/wa")  # Use @app.post to allow POST requests to the /wa endpoint
+async def get_insights_from_zip():
+    try:
+        file_name = "WhatsApp Chat - Pedro Agostinho.zip"
+        response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=file_name)
+        zip_content = response['Body'].read()
+
+        # Read the zip file content and extract text from it
+        with zipfile.ZipFile(io.BytesIO(zip_content), "r") as zip_ref:
+            # Assuming there's only one text file in the zip
+            text_file = [file for file in zip_ref.namelist() if file.endswith(".txt")]
+            if text_file:
+                with zip_ref.open(text_file[0]) as f:
+                    text = f.read().decode("utf-8")
+            else:
+                raise HTTPException(status_code=400, detail="No text file found in the zip")
+
+        # Send the text as a message to the OpenAI API
+        client = OpenAI()
+        completion = client.chat.completions.create(
+            model="gpt-4-0125-preview",
+            messages=[
+                {"role": "system", "content": "Analyze the following conversation."},
+                {"role": "user", "content": text}
+            ]
+        )
+
+        return completion.choices[0].message.content
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0")
