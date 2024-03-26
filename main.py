@@ -80,8 +80,7 @@ async def upload_file(file: UploadFile = File(...), openai_api_key: str = Form(.
 @app.post("/wa")  # Use @app.post to allow POST requests to the /wa endpoint
 async def get_insights_from_zip():
     try:
-        file_name = "WhatsApp Chat - Pedro Agostinho.zip"
-        response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=file_name)
+        response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=ZIP_FILE_NAME)
         zip_content = response['Body'].read()
 
         # Read the zip file content and extract text from it
