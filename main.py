@@ -7,16 +7,6 @@ from fastapi.responses import Response
 from botocore.exceptions import NoCredentialsError, ClientError
 from dotenv import load_dotenv
 import os
-import json
-from langchain.agents import (
-    create_json_agent,
-    AgentExecutor
-)
-from langchain_community.agent_toolkits import JsonToolkit
-from langchain.chains import LLMChain
-from openai import OpenAI
-from langchain.requests import TextRequestsWrapper
-from langchain.tools.json.tool import JsonSpec
 import zipfile
 import io
 
@@ -50,14 +40,15 @@ s3_client = boto3.client(
     region_name=AWS_DEFAULT_REGION,
 )
 
+global OPENAI_API_KEY
+global ZIP_FILE_NAME
+
 @app.get("/")
 async def test_endpoint():
     return {"message": "Success! Your BoostioAI FastAPI application is working correctly."}
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...), openai_api_key: str = None):
-    global OPENAI_API_KEY
-    global ZIP_FILE_NAME
 
     if not file.content_type.startswith('application/zip'):
         raise HTTPException(status_code=415, detail="Unsupported file type. Only ZIP files are accepted.")
