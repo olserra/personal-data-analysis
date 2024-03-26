@@ -42,8 +42,6 @@ AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 
-file_name = "conversations.json"
-
 # Initialize S3 client
 s3_client = boto3.client(
     's3',
@@ -57,9 +55,9 @@ async def test_endpoint():
     return {"message": "Success! Your BoostioAI FastAPI application is working correctly."}
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...), openai_api_key: str = Form(...)):
+async def upload_file(file: UploadFile = File(...), openai_api_key: str = None):
     global OPENAI_API_KEY
-    global ZIP_FILE_NAME  # Access the global variable
+    global ZIP_FILE_NAME
 
     if not file.content_type.startswith('application/zip'):
         raise HTTPException(status_code=415, detail="Unsupported file type. Only ZIP files are accepted.")
