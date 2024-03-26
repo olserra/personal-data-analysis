@@ -79,6 +79,7 @@ async def upload_file(file: UploadFile = File(...), openai_api_key: str = None):
 async def get_insights_from_zip():
     try:
         response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=ZIP_FILE_NAME)
+        print(response)
         zip_content = response['Body'].read()
 
         # Read the zip file content and extract text from it
@@ -92,7 +93,7 @@ async def get_insights_from_zip():
                 raise HTTPException(status_code=400, detail="No text file found in the zip")
 
         # Send the text as a message to the OpenAI API
-        client = OpenAI()
+        client = OpenAI(api_key=OPENAI_API_KEY)
         completion = client.chat.completions.create(
             model="gpt-4-0125-preview",
             messages=[
