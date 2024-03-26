@@ -48,7 +48,8 @@ async def test_endpoint():
     return {"message": "Success! Your BoostioAI FastAPI application is working correctly."}
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...), openai_api_key: str = None):
+async def upload_file(file: UploadFile = File(...), x_openai_api_key: str = Header(None), x_filename: str = Header(None)):
+
 
     if not file.content_type.startswith('application/zip'):
         raise HTTPException(status_code=415, detail="Unsupported file type. Only ZIP files are accepted.")
