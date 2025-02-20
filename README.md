@@ -1,4 +1,4 @@
-# BoostioAI
+# Personal Data Analysis
 
 ## Introduction
 
